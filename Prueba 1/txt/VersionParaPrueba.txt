@@ -1,0 +1,309 @@
+1.- IP DHCP
+# vi /etc/sysconfig/network-scripts/ifcfg-eth0
+	Modificamos la opcion ONBOOT=no   a  ONBOOT=yes 
+# service network restart
+
+2.- IP ESTATICA
+# vi /etc/sysconfig/network-scripts/ifcfg-eth0 
+
+	DEVICE=eth0 
+	TYPE=Ethernet 
+	UUID=397cac28-b7ec-41b2-8e9c-dd980e9f46fc 
+	ONBOOT=yes 
+	NM_CONTROLEED=yes 
+	HWADDR=08:00:27:15:66:37 
+
+	# Modificaciones 
+	BOOTPROTO=none 
+	IPADDR=20.33.6.14
+	PREFIX=24 
+	GATEWAY=20.33.6.1
+	DNS1=20.33.6.1 
+	DEFROUTE=yes 
+	IPV4_FAILURE_FATAL=yes 
+	IPV6INIT=no 
+	NAME=”System eth0″ 
+	NETMASK=255.255.255.0 
+	USERCTL=no 
+
+# service network restart
+
+
+3.- HABILITACION GATEWAY (viene por defecto)
+# vi /etc/sysconfig/network 
+
+	NETWORKING=yes 
+	HOSTNAME= benjamin.moratorres.cl
+	GATEWAY=20.33.6.1
+
+4.- DNS
+# vi /etc/resolv.conf 
+	nameserver: 20.33.7.1
+
+# service network restart
+
+5.- INSTALAR SSH
+# yum install openssh-server (Realiza preguntas)
+# yum -y install openssh-server (NO Realiza Preguntas, asume Yes)
+
+CONFIGURAR
+# vi /etc/ssh/sshd_config
+
+--- Port 22   Gato(#) significa comentario
+# Port 23033
+
+#PermitRootLogin yes
+PermitRootLogin yes
+ListenAddress 192.168.1.10
+AllowUsers Nombre_Usuario
+
+firewall-cmd --zone=public --add-port=23033/tcp --permanent
+firewall-cmd --reload      # Cargamos la nueva configuración
+
+vi /etc/sysconfig/iptables
+
+#-A INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 23033 -j ACCEPT
+
+6.- Instalacion FTP (opcional)
+
+# chkconfig --list | grep vsftpd
+# yum  install vsftpd 
+
+# vi /etc/vsftpd/vsftpd.conf 
+touch /etc/vsftpd/chroot_list 
+
+
+Activacion ------ NO NECESARIOS
+# chkconfig --list | grep vsftpd
+# chkconfig  vsftpd on
+
+ service vsftpd start
+ service vsftpd stop
+ service vsftpd restart
+
+ 7.- HABILITAR PUERTO FIREWALL
+ vi /etc/sysconfig/iptables
+ -A INPUT -m state --state NEW -m tcp -p tcp --dport 21 -j ACCEPT
+ service iptables restart
+
+
+
+ --------- requisitos para la instalacion de oracle 
+
+ 1.- Nombre del Servidor
+
+ # vi /etc/hosts
+
+	 127.0.0.1         localhost           localhost.domain.cl
+	127.0.0.1		benjamin.moratorres.cl 	benjamin
+	ip.que.me.dan   benjamin.moratorres.cl 	benjamin
+	o tambien
+	127.0.0.1         constanza.harrys.cl     constanza  localhost   localhost.domain.cl
+
+2.- LIMITS 
+
+# vi /etc/security/limits.conf 
+
+	oracle soft nproc 2047
+	oracle hard nproc 16384
+	oracle soft nofile 4096
+	oracle hard nofile 65536
+	oracle soft stack 10240
+
+3.- KERNEL 
+
+# vi /etc/sysctl.conf
+// las dos primera quizas aparezcan
+
+kernel.shmall = 2097152
+kernel.shmmax = 68719476736 
+kernel.shmmni = 4096
+kernel.sem = 250 32000 100 128
+fs.file-max = 6815744
+fs.aio-max-nr = 1048576
+net.ipv4.ip_local_port_range = 9000 65500
+net.core.rmem_default = 262144
+net.core.rmem_max = 4194304
+net.core.wmem_default = 262144
+net.core.wmem_max = 1048576
+
+# /sbin/sysctl -p (HACER LOS CAMBIOS)
+
+4.- librerias
+
+# yum -y install gcc gcc-c++ compat-libstdc++-33 elfutils-libelf-devel 
+# yum -y install libaio-devel libstdc++-devel unixODBC unixODBC-devel 
+-- para oracle-linux
+#yum -y install compat-libcap1 ksh
+
+5.- CREAR USUARIOS
+
+	#Grupos Básicos
+	groupadd dba
+	groupadd oinstall
+
+
+	#Grupos para ASM
+	groupadd asmadmin
+	groupadd asmoper
+	groupadd asmdba
+
+	useradd -g dba  oracle
+	useradd -g oinstall -G asmadmin,asmdba,dba,asmoper grid
+
+	usermod -g oinstall -G asmdba,dba oracle
+
+	passwd grid
+	passwd oracle
+
+
+	//PARA LA PRUEBA
+
+	groupadd dba
+	useradd -g dba -d /oracle oracle
+
+
+
+	(LO CREA AUTOMATICAMENTE)
+	mkdir -p /u01/app/grid
+	mkdir -p /u01/app/11.2.0/grid
+	mkdir -p /u01/app/oracle/product/11.2.0/dbhome_1
+
+	chown -R grid:oinstall /u01/app
+	chown -R oracle:oinstall /u01/app/oracle
+
+	chmod 775 /u01/app
+
+6.- PROFILE ORACLE
+
+# vi /home/oracle/.bash_profile
+
+	TMP=/tmp; export TMP
+	TMPDIR=$TMP; export TMPDIR
+	ORACLE_HOSTNAME=constanza; export ORACLE_HOSTNAME
+	ORACLE_UNQNAME=bdHarrys; export ORACLE_UNQNAME
+	ORACLE_BASE=/u01/app/oracle; export ORACLE_BASE
+	ORACLE_HOME=$ORACLE_BASE/product/11.2.0/dbhome_1; export ORACLE_HOME
+	ORACLE_SID=sidHarrys; export ORACLE_SID
+	PATH=/usr/sbin:$PATH; export PATH
+	PATH=$ORACLE_HOME/bin:$PATH; export PATH
+	LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib; export LD_LIBRARY_PATH
+	CLASSPATH=$ORACLE_HOME/JRE:$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib; export CLASSPATH
+
+# source /home/oracle/.bash_profile
+
+
+
+----------------------------------------
+
+
+CONFIGURACION DE LA RED  LISTENER
+
+# netca
+
+- puente de coneccion
+
+# dbca
+
+
+
+
+
+#
+################
+Creación del Grupo
+#groupadd dba
+
+Creación de Usuario
+#useradd -g dba -d /oracle oracle
+
+Contraseña al Usuario oracle
+#passwd oracle
+:oracle
+:oracle
+
+Dirigirse a la ruta donde se encuentran los archivos de Instalación
+#cd /root/Oracle11g
+
+Descomprimir los archivos de Oracle en la carpeta del usuario Oracle
+#unzip -d /oracle p(tabular)1(tabular).zip
+#unzip -d /oracle p(tabular)2(tabular).zip
+
+Borrar los archivos de instalación comprimidos
+#rm -rf *.zip
+
+Copiar el archivo de configuración del entorno del Usuario del Sistema Operativo
+#cp .bash_profile /oracle
+:s
+
+Cerrar Sesión del usuario Root
+Iniciar sesión con usuario Oracle
+  
+Iniciar la instalación del Software Oracle
+$/oracle/database/./runInstaller
+
+PASO 1/11
+Quitar el ticket a deseo obtener actualizaciones
+Confirmamos con (SI)
+
+PASO 2/11
+Omitir actualizaciones de Software
+
+PASO 3/10
+Instalar solo el software de base de datos
+
+PASO 4/10
+Instalación de Base de Datos de Instancia Única
+
+PASO 5/10
+Siguiente
+
+PASO 6/10
+Enterprise
+
+PASO 7/13
+Directorio Base
+Ubicación del Software
+
+PASO 8/13
+Inventario
+
+PASO 9/13
+dba
+
+PASO 10/13
+Ignorar todo
+Confirmamos (SI)
+
+PASO 11/13
+Resumen
+
+PASO Post Instalación
+Ejecutar 2 Scripts en modo root
+para copiar: CTRL+C 
+pegar en el terminal: SHIFT INSERT
+en el segundo cuando aparece la ruta de los archivos /bin.. enter para aceptar
+cerrar el terminal de root.
+
+
+
+
+##############
+
+Iniciar sesión con el usuario Oracle
+
+Iniciar el software de configuración de red
+$netca
+
+Configurar un Listener
+Agregar
+Nombre: LISTENER
+Protocolo: TCP
+Puerto: 1521
+¿Configurar otro Listener?: No
+Siguiente
+Terminar
+
+#############
+

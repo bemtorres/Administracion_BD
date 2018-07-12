@@ -1,0 +1,80 @@
+1.- 
+
+groupadd oinstall
+groupadd dba
+useradd -g oinstall -G dba oracle
+passwd oracle
+cd /etc/yum.repos.d/
+
+wget http://yum.oracle.com/yum-el5.repo (oracle linux5)
+
+
+wget http://yum.oracle.com/public-yum-ol6.repo (oracle linux 6 https://yum.oracle.com/getting-started.html)
+
+nano public-yum-el5.repo
+(cambiar el 
+
+ol5_u7_base
+	enabled = 1
+el5_addons
+	enabled = 1
+el5_oracle_addons
+	enabled = 1
+) //Guardar los cambios
+
+
+yum update
+
+yum install oracle-validated 
+( instalar paquetes Y)
+
+------------------
+mkdir -p /u01/app
+chown -R oracle:oinstall /u01
+chmod -R 775 /u01
+xhost +
+su - oracle
+nano .bash_profile
+
+|
+export ORACLE_BASE=/u01/app/oracle
+export ORACLE_SID=prueba
+export ORACLE_HOME=/u01/app/oracle/product/11.2.0/db_1
+export PATH=$ORACLE_HOME/bin
+
+|(guardar)
+-------
+root: xhost +
+su - oracle
+
+cd database
+./runInstaller
+
+-------/hacer lo que sale en la terminal del oracle/---
+
+
+
+
+
+2 .- verificar
+(ver si esta instalada)
+su - oracle
+sqlplus / as sysdba
+
+3.- 
+su - oracle
+dbca (Sistema de configuracion)
+
+
+- nombre de la base 
+
+netca (asistente de configuracion)
+(configurar lister)
+
+
+sqlplys /as sysdba
+
+
+
+
+
